@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blackjack</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:-apple-system,'Segoe UI',Roboto,sans-serif; background:#0c1f16; color:#e9f5ec; min-height:100vh; padding:18px 12px 50px; }
+  .wrap { max-width:600px; margin:0 auto; }
+  header { text-align:center; margin-bottom:10px; }
+  header h1 { font-size:26px; }
+  header .tag { color:#7da98c; font-size:12px; }
+  a { color:#ffd166; text-decoration:none; }
+  .hud { display:flex; justify-content:center; gap:26px; margin-bottom:10px; font-variant-numeric:tabular-nums; }
+  .hud .c { text-align:center; }
+  .hud .v { font-size:20px; font-weight:800; }
+  .hud .k { font-size:10px; color:#7da98c; text-transform:uppercase; letter-spacing:1px; }
+  .felt { background:#14532d; border:2px solid #166534; border-radius:20px; padding:16px; }
+  .side { margin-bottom:14px; }
+  .side .who { font-size:11px; color:#a7d7b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; display:flex; justify-content:space-between; }
+  .cards { display:flex; gap:6px; flex-wrap:wrap; min-height:82px; }
+  .card { width:56px; height:78px; border-radius:8px; background:#f8fafc; color:#0f172a; display:flex; flex-direction:column; justify-content:space-between; padding:6px 7px; font-weight:800; box-shadow:0 2px 4px rgba(0,0,0,.35); }
+  .card.red { color:#dc2626; }
+  .card .r { font-size:17px; }
+  .card .s { font-size:19px; align-self:flex-end; }
+  .card.back { background:#1e3a8a; border:2px solid #93c5fd; }
+  .total { font-variant-numeric:tabular-nums; color:#e9f5ec; }
+  #msg { text-align:center; min-height:26px; font-size:16px; font-weight:700; margin:8px 0; color:#ffd166; }
+  .row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:10px; }
+  .btn { background:#ffd166; color:#0c1f16; border:none; border-radius:999px; padding:10px 20px; font-size:14px; font-weight:800; cursor:pointer; }
+  .btn.ghost { background:#1c3a2a; color:#a7d7b8; }
+  .btn:disabled { opacity:.4; cursor:default; }
+  .chip { background:#1c3a2a; border:2px dashed #ffd166; color:#ffd166; border-radius:999px; padding:8px 14px; font-size:13px; font-weight:800; cursor:pointer; }
+  .chip.on { background:#ffd166; color:#0c1f16; }
+  #hint { text-align:center; font-size:12px; color:#7da98c; min-height:16px; margin-top:6px; }
+  .note { text-align:center; color:#3d5c49; font-size:11.5px; margin-top:14px; line-height:1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>&#9824; Blackjack</h1><div class="tag">beat the dealer. free chips, strategy hints included.</div></header>
+  <div class="hud">
+    <div class="c"><div class="v" id="chips">1000</div><div class="k">chips</div></div>
+    <div class="c"><div class="v" id="betShow">0</div><div class="k">bet</div></div>
+  </div>
+  <div class="felt">
+    <div class="side">
+      <div class="who"><span>Dealer</span><span class="total" id="dTotal"></span></div>
+      <div class="cards" id="dCards"></div>
+    </div>
+    <div class="side">
+      <div class="who"><span>You</span><span class="total" id="pTotal"></span></div>
+      <div class="cards" id="pCards"></div>
+    </div>
+    <div id="msg"></div>
+    <div class="row" id="betRow">
+      <button class="chip" data-bet="10">10</button>
+      <button class="chip on" data-bet="25">25</button>
+      <button class="chip" data-bet="100">100</button>
+      <button class="btn" id="deal">Deal</button>
+    </div>
+    <div class="row" id="playRow" style="display:none">
+      <button class="btn" id="hit">Hit</button>
+      <button class="btn" id="stand">Stand</button>
+      <button class="btn ghost" id="double">Double</button>
+      <button class="btn ghost" id="hintBtn">Hint</button>
+    </div>
+    <div id="hint"></div>
+  </div>
+  <div class="note">Dealer stands on 17. Blackjack pays 3:2.<br><a href="index.html">about</a></div>
+</div>
+<script src="engine.js?v=1"></script>
+<script>
+var CHIP_KEY='blackjack-chips-v1';
+var S={chips:1000, betSel:25, bet:25, deck:[], player:[], dealer:[], phase:'bet'};
+function $(id){return document.getElementById(id);}
+function loadChips(){ try{var v=+localStorage.getItem(CHIP_KEY); if(v>0) S.chips=v;}catch(_){}}
+function saveChips(){ try{localStorage.setItem(CHIP_KEY,S.chips);}catch(_){}}
+var SUIT_GLYPH={S:'\u2660',H:'\u2665',D:'\u2666',C:'\u2663'};
+function cardEl(c,faceDown){
+  var d=document.createElement('div');
+  if(faceDown){ d.className='card back'; return d; }
+  d.className='card'+((c.s==='H'||c.s==='D')?' red':'');
+  d.innerHTML='<div class="r">'+c.r+'</div><div class="s">'+SUIT_GLYPH[c.s]+'</div>';
+  return d;
+}
+function render(){
+  $('chips').textContent=S.chips;
+  $('betShow').textContent=S.phase==='bet'?0:S.bet;
+  var dc=$('dCards'); dc.innerHTML='';
+  S.dealer.forEach(function(c,i){ dc.appendChild(cardEl(c, S.phase==='play'&&i===1)); });
+  var pc=$('pCards'); pc.innerHTML='';
+  S.player.forEach(function(c){ pc.appendChild(cardEl(c,false)); });
+  $('pTotal').textContent=S.player.length?(''+(S.player.length?softText(S.player):'')):'';
+  $('dTotal').textContent=S.dealer.length?(S.phase==='play'?(''+cardVal(S.dealer[0].r)+' + ?'):softText(S.dealer)):'';
+  $('betRow').style.display=S.phase==='bet'?'flex':'none';
+  $('playRow').style.display=S.phase==='play'?'flex':'none';
+  $('double').disabled=!(S.phase==='play'&&S.player.length===2&&S.chips>=S.bet);
+}
+function softText(hand){
+  var v=handValue(hand);
+  return (v.soft&&v.total<21)?('soft '+v.total):(''+v.total);
+}
+function deal(){
+  if(S.chips<S.bet){ $('msg').textContent='Not enough chips - reset below 25.'; return; }
+  S.deck=shuffle(makeDeck());
+  S.player=[S.deck.pop(),S.deck.pop()];
+  S.dealer=[S.deck.pop(),S.deck.pop()];
+  S.phase='play';
+  $('msg').textContent='';
+  $('hint').textContent='';
+  if(isBlackjack(S.player)||isBlackjack(S.dealer)) finish();
+  render();
+}
+function finish(){
+  S.phase='done';
+  var r=settle(S.player,S.dealer,S.bet);
+  S.chips+=r.payout-S.bet;
+  if(S.chips<0)S.chips=0;
+  saveChips();
+  var txt = r.result==='win' ? (r.blackjack?'Blackjack! +':'You win +')+(r.payout-S.bet) :
+            r.result==='push' ? 'Push - bet back.' :
+            'Dealer wins -'+S.bet+'.';
+  $('msg').textContent=txt+(S.chips<=0?' Out of chips - reloading 1000.':'');
+  if(S.chips<=0){ S.chips=1000; saveChips(); }
+  S.phase='bet';
+  S.bet=S.betSel;
+  render();
+}
+$('deal').onclick=deal;
+$('hit').onclick=function(){
+  S.player.push(S.deck.pop());
+  if(isBust(S.player)) finish();
+  render();
+};
+$('stand').onclick=function(){
+  dealerPlay(S.dealer,S.deck);
+  finish();
+};
+$('double').onclick=function(){
+  if(S.player.length!==2||S.chips<S.bet) return;
+  S.bet*=2;
+  S.player.push(S.deck.pop());
+  if(!isBust(S.player)) dealerPlay(S.dealer,S.deck);
+  finish();
+};
+$('hintBtn').onclick=function(){
+  var m=basicStrategy(S.player,S.dealer[0]);
+  $('hint').textContent='Basic strategy says: '+(m==='H'?'hit':m==='S'?'stand':'double down')+'.';
+};
+document.querySelectorAll('[data-bet]').forEach(function(b){
+  b.onclick=function(){
+    S.betSel=+b.dataset.bet;
+    document.querySelectorAll('[data-bet]').forEach(function(x){ x.classList.toggle('on',x===b); });
+  };
+});
+loadChips();
+render();
+</script>
+</body>
+</html>

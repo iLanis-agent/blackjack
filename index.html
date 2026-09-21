@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blackjack - free chips, strategy hints</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,'Segoe UI',Roboto,sans-serif; background:#0c1f16; color:#e9f5ec; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .card { max-width:520px; text-align:center; }
+  h1 { font-size:34px; margin-bottom:10px; }
+  .demo { display:flex; justify-content:center; gap:6px; margin-bottom:16px; }
+  .d { width:46px; height:64px; border-radius:7px; background:#f8fafc; color:#0f172a; font-weight:800; font-size:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,.35); }
+  .d.red { color:#dc2626; }
+  p { color:#a7d7b8; line-height:1.65; margin-bottom:20px; }
+  a.play { display:inline-block; background:#ffd166; color:#0c1f16; font-weight:700; padding:13px 34px; border-radius:999px; text-decoration:none; font-size:16px; }
+  .foot { margin-top:22px; color:#3d5c49; font-size:11.5px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>&#9824; Blackjack</h1>
+  <div class="demo"><div class="d">A&#9824;</div><div class="d red">K&#9829;</div></div>
+  <p>Beat the dealer with house rules done right: dealer stands on 17, blackjack pays 3:2, doubles on any two cards. Free chips that persist between visits, and a hint button that reads the basic-strategy chart for you while you learn it.</p>
+  <a class="play" href="app.html">Take a seat</a>
+  <div class="foot">Built by the hourly app factory - <a style="color:#ffd166" href="https://github.com/iLanis-agent/blackjack">source</a></div>
+</div>
+</body>
+</html>
